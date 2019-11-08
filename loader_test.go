@@ -13,42 +13,36 @@ func TestLoader(t *testing.T) {
 	l := Loader{
 		MaxBatch: 2,
 		Timeout:  time.Millisecond,
-		Fn: func(ctx context.Context, IDs []int64) Response {
+		Fn: func(ctx context.Context, IDs []int64) (interface{}, error) {
 			assert.Equal(t, 1, len(IDs))
 			assert.Equal(t, int64(1), IDs[0])
-			return Response{
-				Items: IDs,
-				Err:   nil,
-			}
+			return IDs, nil
 		},
 	}
 
-	resp := <-l.Get(context.TODO(), 1)
-	assert.Nil(t, resp.Err)
-	assert.Equal(t, int64(1), resp.Items.([]int64)[0])
+	value, err := l.Get(context.TODO(), 1)
+	assert.Nil(t, err)
+	assert.Equal(t, int64(1), value.([]int64)[0])
 }
 
 func TestLoaderMaxBatch(t *testing.T) {
 	l := Loader{
 		MaxBatch: 2,
 		Timeout:  time.Millisecond,
-		Fn: func(ctx context.Context, IDs []int64) Response {
+		Fn: func(ctx context.Context, IDs []int64) (interface{}, error) {
 			assert.Equal(t, 2, len(IDs))
-			return Response{
-				Items: IDs,
-				Err:   nil,
-			}
+			return IDs, nil
 		},
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		resp := <-l.Get(context.TODO(), 1)
-		assert.Nil(t, resp.Err)
-		assert.Equal(t, 2, len(resp.Items.([]int64)))
+		value, err := l.Get(context.TODO(), 1)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(value.([]int64)))
 		found := false
-		for _, i := range resp.Items.([]int64) {
+		for _, i := range value.([]int64) {
 			if i == 1 {
 				found = true
 				break
@@ -58,11 +52,11 @@ func TestLoaderMaxBatch(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		resp := <-l.Get(context.TODO(), 2)
-		assert.Nil(t, resp.Err)
-		assert.Equal(t, 2, len(resp.Items.([]int64)))
+		value, err := l.Get(context.TODO(), 2)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(value.([]int64)))
 		found := false
-		for _, i := range resp.Items.([]int64) {
+		for _, i := range value.([]int64) {
 			if i == 2 {
 				found = true
 				break
