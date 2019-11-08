@@ -12,12 +12,12 @@ type Loader struct {
 	wait     chan Response
 	MaxBatch int
 	Timeout  time.Duration
-	Fn       func(baseCtx context.Context, IDs []int64) Response
+	Fn       func(baseCtx context.Context, IDs []int64) (interface{}, error)
 }
 
 type Response struct {
-	Err   error
-	Items interface{}
+	Error error
+	Value interface{}
 }
 
 func (t *Loader) Get(ctx context.Context, id int64) chan Response {
@@ -46,7 +46,8 @@ func (t *Loader) Get(ctx context.Context, id int64) chan Response {
 
 func (t *Loader) consume(ctx context.Context) {
 	go func(ids []int64, wait chan Response) {
-		resp := t.Fn(ctx, ids)
+		resp := Response{}
+		resp.Value, resp.Error = t.Fn(ctx, ids)
 		for range ids {
 			wait <- resp
 		}
