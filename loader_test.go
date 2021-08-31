@@ -1,7 +1,6 @@
 package loader
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -13,14 +12,14 @@ func TestLoader(t *testing.T) {
 	l := Loader{
 		MaxBatch: 2,
 		Timeout:  time.Millisecond,
-		Fn: func(ctx context.Context, IDs []int64) (interface{}, error) {
+		Fn: func(IDs []int64) (interface{}, error) {
 			assert.Equal(t, 1, len(IDs))
 			assert.Equal(t, int64(1), IDs[0])
 			return IDs, nil
 		},
 	}
 
-	value, err := l.Get(context.TODO(), 1)
+	value, err := l.Get(1)
 	assert.Nil(t, err)
 	assert.Equal(t, int64(1), value.([]int64)[0])
 }
@@ -29,7 +28,7 @@ func TestLoaderMaxBatch(t *testing.T) {
 	l := Loader{
 		MaxBatch: 2,
 		Timeout:  time.Millisecond,
-		Fn: func(ctx context.Context, IDs []int64) (interface{}, error) {
+		Fn: func(IDs []int64) (interface{}, error) {
 			assert.Equal(t, 2, len(IDs))
 			return IDs, nil
 		},
@@ -38,7 +37,7 @@ func TestLoaderMaxBatch(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		value, err := l.Get(context.TODO(), 1)
+		value, err := l.Get(1)
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(value.([]int64)))
 		found := false
@@ -52,7 +51,7 @@ func TestLoaderMaxBatch(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		value, err := l.Get(context.TODO(), 2)
+		value, err := l.Get(2)
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(value.([]int64)))
 		found := false
