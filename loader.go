@@ -6,12 +6,12 @@ import (
 )
 
 type Loader struct {
-	sync.Mutex
-	list     []int64
+	mutex    sync.Mutex
+	list     []interface{}
 	wait     chan response
 	MaxBatch int
 	Timeout  time.Duration
-	Fn       func(IDs []int64) (interface{}, error)
+	Fn       func(keys []interface{}) (interface{}, error)
 }
 
 type response struct {
@@ -19,17 +19,17 @@ type response struct {
 	Value interface{}
 }
 
-func (t *Loader) Get(id int64) (interface{}, error) {
-	t.Lock()
+func (t *Loader) Load(key interface{}) (interface{}, error) {
+	t.mutex.Lock()
 	wait := t.wait
-	t.list = append(t.list, id)
+	t.list = append(t.list, key)
 	if len(t.list) == 1 {
 		wait = make(chan response)
 		t.wait = wait
 		go func() {
 			time.Sleep(t.Timeout)
-			t.Lock()
-			defer t.Unlock()
+			t.mutex.Lock()
+			defer t.mutex.Unlock()
 			if t.wait == wait {
 				t.consume()
 			}
@@ -38,14 +38,14 @@ func (t *Loader) Get(id int64) (interface{}, error) {
 	if len(t.list) == t.MaxBatch {
 		t.consume()
 	}
-	t.Unlock()
+	t.mutex.Unlock()
 
 	r := <-wait
 	return r.Value, r.Error
 }
 
 func (t *Loader) consume() {
-	go func(ids []int64, wait chan response) {
+	go func(ids []interface{}, wait chan response) {
 		resp := response{}
 		resp.Value, resp.Error = t.Fn(ids)
 		for range ids {
@@ -55,5 +55,5 @@ func (t *Loader) consume() {
 	}(t.list, t.wait)
 
 	t.wait = make(chan response)
-	t.list = make([]int64, 0, t.MaxBatch)
+	t.list = make([]interface{}, 0, t.MaxBatch)
 }
