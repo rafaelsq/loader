@@ -27,7 +27,7 @@ func TestLoader(t *testing.T) {
 
 func TestLoaderMaxBatch(t *testing.T) {
 	l := Loader{
-		MaxBatch: 2,
+		MaxBatch: 3,
 		Timeout:  time.Millisecond,
 		Fn: func(keys []interface{}) (interface{}, error) {
 			IDs := KeysToInt64(keys)
@@ -37,7 +37,7 @@ func TestLoaderMaxBatch(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		value, err := l.Load(int64(1))
 		assert.Nil(t, err)
@@ -45,6 +45,20 @@ func TestLoaderMaxBatch(t *testing.T) {
 		found := false
 		for _, i := range value.([]int64) {
 			if i == 1 {
+				found = true
+				break
+			}
+		}
+		assert.Equal(t, found, true)
+		wg.Done()
+	}()
+	go func() {
+		value, err := l.Load(int64(2))
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(value.([]int64)))
+		found := false
+		for _, i := range value.([]int64) {
+			if i == 2 {
 				found = true
 				break
 			}
